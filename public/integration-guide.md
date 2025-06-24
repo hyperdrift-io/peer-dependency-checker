@@ -79,7 +79,7 @@ Automatically check dependencies before commits:
 # .git/hooks/pre-commit
 #!/bin/bash
 echo "🔍 Running peer dependency check..."
-if command -v pdc &> /dev/null; then
+if command -v pdc &amp;&gt; /dev/null; then
     pdc scan --quick
 else
     echo "⚠️  pdc not found, skipping check"
@@ -233,12 +233,12 @@ npm install -g @hyperdrift-io/peer-dependency-checker
 
 # 2. Set up Husky hooks
 npx husky install
-echo "npx pdc scan --quick" > .husky/pre-commit
+echo "npx pdc scan --quick" &gt; .husky/pre-commit
 chmod +x .husky/pre-commit
 
 # 3. Add aliases to team's shell configs
-echo "alias npm-safe='pdc-install npm'" >> ~/.zshrc
-echo "alias pnpm-safe='pdc-install pnpm'" >> ~/.zshrc
+echo "alias npm-safe='pdc-install npm'" &gt;&gt; ~/.zshrc
+echo "alias pnpm-safe='pdc-install pnpm'" &gt;&gt; ~/.zshrc
 
 # 4. Add to package.json for CI
 {

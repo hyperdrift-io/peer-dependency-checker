@@ -16,7 +16,9 @@
     "test:integration": "node test/integration.test.js",
     "test:journey": "node test/user-journey.test.js",
     "test:all": "npm run test:integration && npm run test:journey",
-    "prepublishOnly": "npm run build && npm run test:all",
+    "validate:markdown": "node scripts/validate-markdown.js",
+    "fix:markdown": "node scripts/fix-mdx-tags.js",
+    "prepublishOnly": "npm run build && npm run test:all && npm run validate:markdown",
     "preinstall": "pdc scan --quick || true",
     "postinstall": "pdc analyze --brief || true",
     "setup-hooks": "./bin/setup-hooks.sh"
@@ -58,5 +60,10 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "remark": "^15.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0"
   }
 }

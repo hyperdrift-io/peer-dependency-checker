@@ -19,7 +19,7 @@ Ever had a major upgrade break your entire build because of peer dependency conf
 
 #### 🧪 **Safe Testing Commands**
 - `pdc scan` - Analyze your project for upgrade opportunities
-- `pdc check <packages>` - Test specific package upgrades for conflicts  
+- `pdc check \<packages\>` - Test specific package upgrades for conflicts  
 - `pdc analyze` - Deep analysis of all peer dependencies
 
 #### 🎨 **Beautiful Output**
@@ -75,7 +75,7 @@ $ pdc scan
 
 At **hyperdrift**, we believe in tools that make developers' lives easier, not harder. This tool was born from our frustration with existing dependency tools that show you what *can* be upgraded, but not what *should* be upgraded safely.
 
-> *"It's like having a senior developer review your upgrades before you break production."*
+*"It's like having a senior developer review your upgrades before you break production."*
 
 ### 🤝 Comparison with Existing Tools
 

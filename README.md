@@ -56,8 +56,6 @@ npm install react@19 react-dom@19
 
 [Install](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Examples](#-examples) • [Journey](#-journey)
 
-</div>
-
 ---
 
 ## 🚀 Why peer-dependency-checker?
@@ -192,11 +190,11 @@ $ pdc recommend
 | Command | Description |
 |---------|-------------|
 | `pdc scan` | Analyze current project for upgrade opportunities |
-| `pdc check <packages>` | Test specific package upgrades for conflicts |
+| `pdc check \<packages\>` | Test specific package upgrades for conflicts |
 | `pdc analyze` | Deep analysis of all peer dependencies |
 | `pdc recommend` | Get smart upgrade recommendations |
 | `pdc outdated` | Enhanced version of `npm outdated` with compatibility |
-| `pdc why <package>` | Explain why a package can't be upgraded |
+| `pdc why \<package\>` | Explain why a package can't be upgraded |
 
 ## 🔧 Configuration
 
@@ -240,7 +238,7 @@ peer-dependency-checker works out-of-the-box with **smart defaults**:
 
 At **hyperdrift**, we believe in tools that make developers' lives easier, not harder. **peer-dependency-checker** was born from our frustration with tools that show you what *can* be upgraded, but not what *should* be upgraded safely.
 
-> *"It's like having a senior developer review your upgrades before you break production."*
+*"It's like having a senior developer review your upgrades before you break production."*
 
 ## 📊 Journey
 
