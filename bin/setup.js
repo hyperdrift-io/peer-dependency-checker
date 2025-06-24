@@ -9,20 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-// Import chalk with fallback for better compatibility
-let chalk;
-try {
-  chalk = require('chalk');
-} catch (error) {
-  // Fallback if chalk is not available
-  chalk = {
-    blue: { bold: (text) => text },
-    green: { bold: (text) => text },
-    yellow: { bold: (text) => text },
-    red: { bold: (text) => text },
-    gray: (text) => text
-  };
-}
+// Import chalk with proper error handling
+const chalk = require('chalk');
 
 // Check if being run with --help flag first
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
