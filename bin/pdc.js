@@ -24,16 +24,16 @@ program
   .description('Analyze current project for upgrade opportunities')
   .option('-q, --quick', 'Quick scan with minimal output')
   .action((options) => {
-    if (options.quick) {
-      console.log('🔍 Quick scanning...');
-    } else {
+    if (!options.quick) {
       console.log('🔍 Scanning your project...\n');
     }
     
     try {
       const scriptPath = path.join(__dirname, '..', 'src', 'upgrade-check.js');
-      const env = options.quick ? { ...process.env, QUICK_MODE: 'true' } : process.env;
-      execSync(`node "${scriptPath}"`, { stdio: 'inherit', env });
+      const args = options.quick ? ['--quick', '--brief'] : [];
+      const command = `node "${scriptPath}" ${args.join(' ')}`.trim();
+      
+      execSync(command, { stdio: 'inherit' });
     } catch (error) {
       console.error('❌ Error running scan:', error.message);
     }

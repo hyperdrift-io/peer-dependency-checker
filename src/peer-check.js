@@ -1,108 +1,168 @@
 #!/usr/bin/env node
 
 /**
- * Quick peer dependency compatibility checker
- * Focuses specifically on checking peer dep conflicts for potential upgrades
+ * Clean peer dependency compatibility checker
+ * Focuses on actionable peer dependency insights
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 
-console.log('🔍 Quick Peer Dependency Compatibility Check\n');
+// Environment flags
+const BRIEF_MODE = process.env.BRIEF_MODE === 'true';
 
-function runCmd(cmd, description) {
-  console.log(`\n📋 ${description}`);
-  console.log('─'.repeat(60));
+// Function to run commands silently
+function runCommandSilent(command, fallback = null) {
+  try {
+    return execSync(command, { 
+      encoding: 'utf8', 
+      stdio: 'pipe',
+      timeout: 10000
+    }).trim();
+  } catch (error) {
+    return fallback;
+  }
+}
+
+// Function to get package manager
+function getPackageManager() {
+  if (fs.existsSync('pnpm-lock.yaml')) return 'pnpm';
+  if (fs.existsSync('yarn.lock')) return 'yarn';
+  if (fs.existsSync('bun.lockb')) return 'bun';
+  return 'npm';
+}
+
+// Function to check current peer dependency issues
+function getCurrentPeerIssues(packageManager) {
+  let command;
+  switch (packageManager) {
+    case 'pnpm':
+      command = 'pnpm ls 2>&1 | grep -E "WARN|ERROR|✕" | head -10';
+      break;
+    case 'yarn':
+      command = 'yarn list --depth=0 2>&1 | grep -E "warning|error" | head -10';
+      break;
+    default:
+      command = 'npm ls 2>&1 | grep -E "WARN|ERROR|missing" | head -10';
+  }
+  
+  const result = runCommandSilent(command);
+  return result || 'No peer dependency issues detected';
+}
+
+// Function to get peer dependencies for a package
+function getPeerDependencies(packageName, version = 'latest') {
+  const result = runCommandSilent(`npm info ${packageName}@${version} peerDependencies --json`);
+  if (!result) return null;
   
   try {
-    const output = execSync(cmd, { encoding: 'utf8', stdio: 'pipe' });
-    console.log(output);
-    return output;
-  } catch (error) {
-    console.log(`⚠️  ${error.message}`);
-    if (error.stdout) console.log(error.stdout);
+    return JSON.parse(result);
+  } catch {
     return null;
   }
 }
 
-async function main() {
-  // 1. Check current peer dependency warnings
-  console.log('🔍 CURRENT PEER DEPENDENCY STATUS');
-  runCmd('pnpm ls 2>&1 | grep -E "WARN|ERROR|✕" || echo "✅ No current peer dependency issues"', 'Current peer dependency warnings');
+// Function to analyze potential conflicts
+function analyzePotentialConflicts() {
+  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  const currentDeps = { ...packageJson.dependencies, ...packageJson.devDependencies };
   
-  // 2. Check what packages want to be upgraded
-  console.log('\n📦 AVAILABLE UPGRADES');
-  const outdated = runCmd('pnpm outdated --format=table', 'Outdated packages');
+  // Common packages that often have peer dependency conflicts
+  const criticalPackages = [
+    'react', 'react-dom', '@types/react', '@types/react-dom',
+    'next', 'typescript', '@types/node', 'eslint'
+  ];
   
-  // 3. Show peer dependencies for packages that have major upgrades available
-  console.log('\n🚨 PEER DEPENDENCIES FOR MAJOR UPGRADES');
+  const conflicts = [];
   
-  const majorUpgrades = ['react@19', 'react-dom@19', '@types/node@24', 'next@15'];
-  
-  for (const pkg of majorUpgrades) {
-    const packageName = pkg.split('@')[0];
-    const version = pkg.split('@')[1];
-    
-    console.log(`\n🔍 Checking ${pkg}:`);
-    runCmd(`npm info ${packageName}@${version} peerDependencies`, `Peer deps for ${pkg}`);
-  }
-  
-  // 4. Simulate what would happen with a dry run
-  console.log('\n🧪 DRY RUN TEST');
-  console.log('Creating temporary package.json with major upgrades...');
-  
-  const packagePath = './package.json';
-  const backupPath = './package.json.dry-test-backup';
-  
-  try {
-    // Backup current package.json
-    fs.copyFileSync(packagePath, backupPath);
-    
-    // Update to major versions temporarily
-    runCmd('ncu --target greatest -u --filter "react,react-dom,@types/node"', 'Updating major packages');
-    
-    // Check what conflicts would occur
-    runCmd('pnpm install --dry-run 2>&1 | head -30', 'Dry-run install results');
-    
-  } finally {
-    // Restore original package.json
-    if (fs.existsSync(backupPath)) {
-      fs.copyFileSync(backupPath, packagePath);
-      fs.unlinkSync(backupPath);
-      console.log('✅ Restored original package.json');
+  for (const pkg of criticalPackages) {
+    if (currentDeps[pkg]) {
+      const currentVersion = currentDeps[pkg].replace(/[\^~]/, '');
+      const latestPeerDeps = getPeerDependencies(pkg, 'latest');
+      
+      if (latestPeerDeps && Object.keys(latestPeerDeps).length > 0) {
+        conflicts.push({
+          package: pkg,
+          current: currentVersion,
+          peerDeps: latestPeerDeps
+        });
+      }
     }
   }
   
-  console.log('\n🎯 SUMMARY');
-  console.log('═'.repeat(60));
-  console.log(`
-✅ Use this workflow for safe major upgrades:
-
-1. Check peer deps first:
-   npm info react@19 peerDependencies
-   npm info react-dom@19 peerDependencies
-
-2. Test in isolation:
-   git checkout -b test-react-19
-   pnpm add react@19 react-dom@19
-   pnpm install --dry-run
-
-3. Look for these warning patterns:
-   - "WARN Issues with peer dependencies found"
-   - "✕ unmet peer dependency"
-   - Version ranges that don't overlap
-
-4. Update dependencies in order:
-   - Core libs first (react, react-dom)
-   - Type definitions (@types/*)
-   - Framework-specific (next, etc.)
-   - Other packages last
-
-5. Test thoroughly:
-   - pnpm test
-   - pnpm test:e2e
-   - Manual testing in dev
-`);
+  return conflicts;
 }
 
-main().catch(console.error); 
+async function main() {
+  const packageManager = getPackageManager();
+  
+  if (BRIEF_MODE) {
+    console.log('🔗 Checking peer dependencies...');
+    const issues = getCurrentPeerIssues(packageManager);
+    if (issues === 'No peer dependency issues detected') {
+      console.log('✅ No peer dependency conflicts found');
+    } else {
+      console.log('⚠️  Peer dependency issues detected');
+      console.log('   Run "pdc analyze" for details');
+    }
+    return;
+  }
+  
+  console.log('🔗 Analyzing peer dependencies...\n');
+  
+  // 1. Current status
+  console.log('📋 CURRENT PEER DEPENDENCY STATUS');
+  console.log('─'.repeat(40));
+  const currentIssues = getCurrentPeerIssues(packageManager);
+  console.log(currentIssues);
+  console.log();
+  
+  // 2. Potential conflicts analysis
+  console.log('⚠️  POTENTIAL UPGRADE CONFLICTS');
+  console.log('─'.repeat(40));
+  
+  const conflicts = analyzePotentialConflicts();
+  
+  if (conflicts.length === 0) {
+    console.log('✅ No major peer dependency conflicts detected');
+  } else {
+    conflicts.forEach(conflict => {
+      console.log(`📦 ${conflict.package}@${conflict.current}`);
+      console.log(`   Peer dependencies:`);
+      Object.entries(conflict.peerDeps).forEach(([dep, version]) => {
+        console.log(`   • ${dep}: ${version}`);
+      });
+      console.log();
+    });
+  }
+  
+  // 3. Recommendations
+  console.log('💡 RECOMMENDATIONS');
+  console.log('─'.repeat(40));
+  
+  if (currentIssues === 'No peer dependency issues detected') {
+    console.log('✅ Your peer dependencies look good!');
+    console.log('   • Safe to proceed with minor updates');
+    console.log('   • Review major upgrades carefully');
+  } else {
+    console.log('📝 Action needed:');
+    console.log('   • Resolve current peer dependency warnings first');
+    console.log('   • Check package documentation for compatibility');
+    console.log('   • Test upgrades in a separate branch');
+  }
+  
+  console.log('\n🔍 For specific package analysis:');
+  console.log('   pdc check react@19 react-dom@19');
+  console.log('   pdc scan  # Full project analysis');
+}
+
+// Handle errors gracefully
+process.on('uncaughtException', (error) => {
+  console.error('❌ An error occurred:', error.message);
+  process.exit(1);
+});
+
+main().catch(error => {
+  console.error('❌ Analysis failed:', error.message);
+  process.exit(1);
+}); 

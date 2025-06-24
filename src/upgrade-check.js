@@ -1,168 +1,213 @@
 #!/usr/bin/env node
 
 /**
- * Comprehensive upgrade compatibility checker
- * This script performs dry-run checks for major upgrades and peer dependency compatibility
+ * Clean, user-friendly upgrade compatibility checker
+ * Focuses on actionable insights without debug noise
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 Starting comprehensive upgrade compatibility check...\n');
+// Environment flags and command line arguments
+const QUICK_MODE = process.env.QUICK_MODE === 'true' || process.argv.includes('--quick');
+const BRIEF_MODE = process.env.BRIEF_MODE === 'true' || process.argv.includes('--brief');
 
-// Function to run commands safely
-function runCommand(command, description) {
-  console.log(`\n📋 ${description}`);
-  console.log(`Running: ${command}`);
-  console.log('─'.repeat(80));
-  
+// Function to run commands silently and return results
+function runCommandSilent(command, fallback = null) {
   try {
-    const output = execSync(command, { 
+    return execSync(command, { 
       encoding: 'utf8', 
       stdio: 'pipe',
-      maxBuffer: 1024 * 1024 * 10 // 10MB buffer
-    });
-    console.log(output);
-    return output;
+      timeout: 10000
+    }).trim();
   } catch (error) {
-    console.log(`⚠️  Command failed: ${error.message}`);
-    if (error.stdout) console.log('STDOUT:', error.stdout);
-    if (error.stderr) console.log('STDERR:', error.stderr);
-    return null;
+    return fallback;
   }
 }
 
-// Function to create a backup package.json for testing
-function createTestPackageJson() {
-  const packagePath = path.join(process.cwd(), 'package.json');
-  const backupPath = path.join(process.cwd(), 'package.json.backup');
-  
-  if (fs.existsSync(packagePath)) {
-    fs.copyFileSync(packagePath, backupPath);
-    console.log('✅ Created backup of package.json');
+// Function to check if a command exists
+function commandExists(command) {
+  try {
+    execSync(`which ${command}`, { stdio: 'pipe' });
     return true;
+  } catch {
+    return false;
   }
-  return false;
 }
 
-// Function to restore package.json
-function restorePackageJson() {
-  const packagePath = path.join(process.cwd(), 'package.json');
-  const backupPath = path.join(process.cwd(), 'package.json.backup');
+// Function to get package manager
+function getPackageManager() {
+  if (fs.existsSync('pnpm-lock.yaml')) return 'pnpm';
+  if (fs.existsSync('yarn.lock')) return 'yarn';
+  if (fs.existsSync('bun.lockb')) return 'bun';
+  return 'npm';
+}
+
+// Function to get outdated packages cleanly
+function getOutdatedPackages(packageManager) {
+  let command;
+  switch (packageManager) {
+    case 'pnpm':
+      command = 'pnpm outdated --format table';
+      break;
+    case 'yarn':
+      command = 'yarn outdated';
+      break;
+    case 'bun':
+      command = 'bun outdated';
+      break;
+    default:
+      command = 'npm outdated';
+  }
   
-  if (fs.existsSync(backupPath)) {
-    fs.copyFileSync(backupPath, packagePath);
-    fs.unlinkSync(backupPath);
-    console.log('✅ Restored original package.json');
+  const result = runCommandSilent(command);
+  return result || 'No outdated packages found or lockfile missing';
+}
+
+// Function to check for major upgrades using ncu
+function getMajorUpgrades() {
+  if (!commandExists('ncu')) {
+    return 'npm-check-updates not available. Install with: npm install -g npm-check-updates';
+  }
+  
+  const result = runCommandSilent('ncu --target major --format group');
+  return result || 'No major upgrades available';
+}
+
+// Function to check peer dependency issues
+function checkPeerDependencies(packageManager) {
+  let command;
+  switch (packageManager) {
+    case 'pnpm':
+      command = 'pnpm ls 2>&1 | grep -i "warn\\|error" | head -5';
+      break;
+    case 'yarn':
+      command = 'yarn list --depth=0 2>&1 | grep -i "warn\\|error" | head -5';
+      break;
+    default:
+      command = 'npm ls 2>&1 | grep -i "warn\\|error" | head -5';
+  }
+  
+  const result = runCommandSilent(command);
+  return result || 'No peer dependency warnings detected';
+}
+
+// Function to get security audit
+function getSecurityAudit(packageManager) {
+  let command;
+  switch (packageManager) {
+    case 'pnpm':
+      command = 'pnpm audit --audit-level moderate --format json';
+      break;
+    case 'yarn':
+      command = 'yarn audit --level moderate --json';
+      break;
+    default:
+      command = 'npm audit --audit-level moderate --json';
+  }
+  
+  const result = runCommandSilent(command);
+  if (!result) return 'No security issues found or audit unavailable';
+  
+  try {
+    const audit = JSON.parse(result);
+    if (audit.vulnerabilities && Object.keys(audit.vulnerabilities).length > 0) {
+      return `${Object.keys(audit.vulnerabilities).length} vulnerabilities found`;
+    }
+    return 'No security issues found';
+  } catch {
+    return 'Security audit completed (details available with full audit)';
   }
 }
 
 // Main execution
 async function main() {
-  try {
-    // 1. Check current outdated packages
-    runCommand('pnpm outdated', '1. Current outdated packages');
+  const packageManager = getPackageManager();
+  
+  if (QUICK_MODE) {
+    // Ultra-quick scan for pre-install hooks
+    console.log('⚡ Quick compatibility check...');
     
-    // 2. Check what major upgrades are available
-    runCommand('ncu --target greatest', '2. All available upgrades (including major)');
-    
-    // 3. Check only major upgrades
-    runCommand('ncu --target latest --filter "/.*/"', '3. Latest stable versions');
-    
-    // 4. Check peer dependency issues in current setup
-    runCommand('pnpm ls --depth=0 2>&1 | grep "WARN\\|ERROR" || echo "No peer dependency warnings found"', '4. Current peer dependency warnings');
-    
-    // 5. Use npm-check for detailed analysis
-    runCommand('npx npm-check --skip-unused', '5. Detailed upgrade analysis with npm-check');
-    
-    // 6. Create test scenario - backup and try major upgrades
-    console.log('\n🧪 TESTING MAJOR UPGRADES (DRY RUN)');
-    console.log('═'.repeat(80));
-    
-    const hasBackup = createTestPackageJson();
-    
-    if (hasBackup) {
-      try {
-        // Try updating package.json to latest versions
-        runCommand('ncu --target greatest -u', '6a. Updating package.json to latest versions');
-        
-        // Check what peer dependency conflicts would occur
-        runCommand('pnpm install --dry-run 2>&1 | head -50', '6b. Dry-run install to check conflicts');
-        
-        // Check peer dependencies with latest versions
-        runCommand('pnpm ls --depth=1 2>&1 | grep "WARN\\|ERROR" | head -20 || echo "No issues found"', '6c. Peer dependency check with updated versions');
-        
-      } finally {
-        // Always restore the original package.json
-        restorePackageJson();
+    const outdated = getOutdatedPackages(packageManager);
+    if (outdated.includes('No outdated') || outdated.includes('not available')) {
+      console.log('✅ No immediate compatibility issues detected');
+    } else {
+      console.log('⚠️  Some packages may need attention');
+      if (!BRIEF_MODE) {
+        console.log('   Run "pdc scan" for detailed analysis');
       }
     }
-    
-    // 7. Check specific high-risk upgrades
-    console.log('\n🚨 HIGH-RISK UPGRADE ANALYSIS');
-    console.log('═'.repeat(80));
-    
-    const highRiskPackages = ['react', 'react-dom', '@types/node', 'next'];
-    
-    for (const pkg of highRiskPackages) {
-      runCommand(`npm info ${pkg} peerDependencies`, `7. Peer dependencies for ${pkg} (latest version)`);
-    }
-    
-    // 8. Check dependency tree depth for potential conflicts
-    runCommand('pnpm ls --depth=2 | grep -E "(├|└)" | wc -l', '8. Dependency tree complexity');
-    
-    // 9. Security audit
-    runCommand('pnpm audit --audit-level moderate', '9. Security audit');
-    
-    // 10. Bundle size impact estimation
-    runCommand('npx bundlephobia list', '10. Bundle size analysis (if bundlephobia is available)');
-    
-    console.log('\n🎯 RECOMMENDATIONS');
-    console.log('═'.repeat(80));
-    console.log(`
-📝 Based on the analysis above, here are the recommended next steps:
-
-1. 🟢 SAFE UPDATES (patch/minor):
-   - These can usually be updated without issues
-   - Run: pnpm update
-
-2. 🟡 MEDIUM RISK (major versions):
-   - Test in a separate branch first
-   - Check breaking changes in changelogs
-   - Run comprehensive tests
-
-3. 🔴 HIGH RISK (core dependencies):
-   - React 18 → 19: Check React 19 breaking changes
-   - @types/node 22 → 24: Verify Node.js compatibility
-   - Review peer dependency conflicts carefully
-
-4. 🧪 TESTING STRATEGY:
-   - Create feature branch: git checkout -b upgrade-dependencies
-   - Update incrementally, not all at once
-   - Run full test suite after each major update
-   - Test in staging environment before production
-
-5. 🔍 MONITORING:
-   - Set up automated dependency checking
-   - Use tools like Dependabot or Renovate
-   - Regular security audits
-`);
-
-  } catch (error) {
-    console.error('❌ Error during compatibility check:', error.message);
+    return;
+  }
+  
+  console.log('🔍 Scanning your project...\n');
+  
+  // 1. Project overview
+  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  console.log(`📦 Project: ${packageJson.name || 'unnamed'}`);
+  console.log(`🔧 Package Manager: ${packageManager}`);
+  console.log(`📋 Dependencies: ${Object.keys(packageJson.dependencies || {}).length} production, ${Object.keys(packageJson.devDependencies || {}).length} development\n`);
+  
+  // 2. Outdated packages
+  console.log('📈 OUTDATED PACKAGES');
+  console.log('─'.repeat(40));
+  const outdated = getOutdatedPackages(packageManager);
+  console.log(outdated);
+  console.log();
+  
+  // 3. Major upgrades available
+  if (!BRIEF_MODE) {
+    console.log('🚀 MAJOR UPGRADES AVAILABLE');
+    console.log('─'.repeat(40));
+    const majorUpgrades = getMajorUpgrades();
+    console.log(majorUpgrades);
+    console.log();
+  }
+  
+  // 4. Peer dependency issues
+  console.log('🔗 PEER DEPENDENCY STATUS');
+  console.log('─'.repeat(40));
+  const peerIssues = checkPeerDependencies(packageManager);
+  console.log(peerIssues);
+  console.log();
+  
+  // 5. Security audit
+  if (!BRIEF_MODE) {
+    console.log('🛡️  SECURITY STATUS');
+    console.log('─'.repeat(40));
+    const security = getSecurityAudit(packageManager);
+    console.log(security);
+    console.log();
+  }
+  
+  // 6. Recommendations
+  console.log('💡 RECOMMENDATIONS');
+  console.log('─'.repeat(40));
+  
+  if (outdated.includes('No outdated')) {
+    console.log('✅ All packages are up to date!');
+  } else {
+    console.log('📝 Next steps:');
+    console.log(`   • Check specific upgrades: pdc check <package>@<version>`);
+    console.log(`   • Safe updates: ${packageManager} update`);
+    console.log('   • Review major version changes before upgrading');
+  }
+  
+  if (!BRIEF_MODE) {
+    console.log('\n🔍 For detailed analysis of specific packages:');
+    console.log('   pdc check react@19 react-dom@19');
+    console.log('   pdc analyze  # Deep peer dependency analysis');
   }
 }
 
-// Handle cleanup on exit
-process.on('exit', () => {
-  restorePackageJson();
-});
-
-process.on('SIGINT', () => {
-  console.log('\n\n🛑 Process interrupted, cleaning up...');
-  restorePackageJson();
+// Handle errors gracefully
+process.on('uncaughtException', (error) => {
+  console.error('❌ An error occurred:', error.message);
   process.exit(1);
 });
 
-main(); 
+main().catch(error => {
+  console.error('❌ Scan failed:', error.message);
+  process.exit(1);
+}); 
