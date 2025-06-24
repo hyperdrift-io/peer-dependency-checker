@@ -1,0 +1,164 @@
+#!/usr/bin/env node
+
+/**
+ * pdc-install: Package manager wrapper with peer dependency checking
+ * Usage: pdc-install npm install react@19
+ *        pdc-install pnpm add lodash@5
+ *        pdc-install yarn add typescript@5
+ */
+
+const { execSync, spawn } = require('child_process');
+const path = require('path');
+const chalk = require('chalk');
+
+const SUPPORTED_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'];
+const INSTALL_COMMANDS = ['install', 'add', 'i'];
+
+function showHelp() {
+  console.log(`
+${chalk.blue('🔍 pdc-install')} - Smart package installation with peer dependency checking
+
+Usage:
+  pdc-install <package-manager> <command> [packages...]
+  
+Examples:
+  pdc-install npm install react@19 react-dom@19
+  pdc-install pnpm add lodash@5
+  pdc-install yarn add typescript@5 --dev
+  
+Supported package managers: ${SUPPORTED_MANAGERS.join(', ')}
+Supported commands: ${INSTALL_COMMANDS.join(', ')}
+`);
+}
+
+function extractPackages(args) {
+  const packages = [];
+  for (const arg of args) {
+    // Skip flags and options
+    if (arg.startsWith('-')) continue;
+    // Skip common npm/pnpm/yarn keywords
+    if (['--save', '--save-dev', '--global', '--workspace'].includes(arg)) continue;
+    // If it looks like a package (contains @ or is just a name)
+    if (arg.includes('@') || /^[a-z]/.test(arg)) {
+      packages.push(arg);
+    }
+  }
+  return packages;
+}
+
+async function runPrecheck(packages) {
+  console.log(chalk.yellow('🛡️  Running peer dependency pre-check...\n'));
+  
+  try {
+    const pdcPath = path.join(__dirname, 'pdc.js');
+    const args = ['precheck', ...packages];
+    
+    execSync(`node "${pdcPath}" ${args.join(' ')}`, { 
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+    
+    console.log(chalk.green('\n✅ Pre-check completed\n'));
+    return true;
+  } catch (error) {
+    console.log(chalk.yellow('\n⚠️  Pre-check had issues, but continuing...\n'));
+    return true; // Don't block installation on precheck failures
+  }
+}
+
+function promptUser(message) {
+  return new Promise((resolve) => {
+    const readline = require('readline').createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    readline.question(message, (answer) => {
+      readline.close();
+      resolve(answer.toLowerCase().trim());
+    });
+  });
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  
+  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
+    showHelp();
+    process.exit(0);
+  }
+  
+  const [packageManager, command, ...installArgs] = args;
+  
+  // Validate package manager
+  if (!SUPPORTED_MANAGERS.includes(packageManager)) {
+    console.error(chalk.red(`❌ Unsupported package manager: ${packageManager}`));
+    console.error(chalk.gray(`Supported: ${SUPPORTED_MANAGERS.join(', ')}`));
+    process.exit(1);
+  }
+  
+  // Validate command
+  if (!INSTALL_COMMANDS.includes(command)) {
+    console.error(chalk.red(`❌ Unsupported command: ${command}`));
+    console.error(chalk.gray(`Supported: ${INSTALL_COMMANDS.join(', ')}`));
+    process.exit(1);
+  }
+  
+  // Extract package names from arguments
+  const packages = extractPackages(installArgs);
+  
+  if (packages.length === 0) {
+    console.log(chalk.yellow('⚠️  No packages detected, running basic compatibility check...'));
+    await runPrecheck([]);
+  } else {
+    console.log(chalk.blue(`📦 Detected packages: ${packages.join(', ')}`));
+    await runPrecheck(packages);
+  }
+  
+  // Ask user if they want to proceed
+  const answer = await promptUser(
+    chalk.cyan('Continue with installation? (y/N): ')
+  );
+  
+  if (!['y', 'yes'].includes(answer)) {
+    console.log(chalk.yellow('Installation cancelled by user'));
+    process.exit(0);
+  }
+  
+  // Run the actual package manager command
+  console.log(chalk.blue(`\n🚀 Running: ${packageManager} ${command} ${installArgs.join(' ')}\n`));
+  
+  try {
+    const child = spawn(packageManager, [command, ...installArgs], {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+    
+    child.on('close', (code) => {
+      if (code === 0) {
+        console.log(chalk.green('\n✅ Installation completed successfully!'));
+        
+        // Run post-install check
+        console.log(chalk.blue('\n🔍 Running post-install check...'));
+        try {
+          const pdcPath = path.join(__dirname, 'pdc.js');
+          execSync(`node "${pdcPath}" analyze --brief`, { 
+            stdio: 'inherit',
+            cwd: process.cwd()
+          });
+        } catch (error) {
+          console.log(chalk.yellow('⚠️  Post-install check had issues'));
+        }
+      } else {
+        console.error(chalk.red(`❌ Installation failed with exit code ${code}`));
+        process.exit(code);
+      }
+    });
+    
+  } catch (error) {
+    console.error(chalk.red('❌ Failed to run installation command:'), error.message);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error); 

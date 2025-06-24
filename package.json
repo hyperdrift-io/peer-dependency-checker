@@ -5,13 +5,17 @@
   "main": "dist/index.js",
   "bin": {
     "peer-dependency-checker": "./bin/pdc.js",
-    "pdc": "./bin/pdc.js"
+    "pdc": "./bin/pdc.js",
+    "pdc-install": "./bin/pdc-install"
   },
   "scripts": {
-    "build": "chmod +x bin/pdc.js",
+    "build": "chmod +x bin/pdc.js && chmod +x bin/pdc-install && chmod +x bin/setup-hooks.sh",
     "dev": "npm run build",
     "test": "echo 'No tests yet'",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "preinstall": "pdc scan --quick || true",
+    "postinstall": "pdc analyze --brief || true",
+    "setup-hooks": "./bin/setup-hooks.sh"
   },
   "keywords": [
     "hyperdrift",

@@ -22,12 +22,18 @@ program
 program
   .command('scan')
   .description('Analyze current project for upgrade opportunities')
-  .action(() => {
-    console.log('🔍 Scanning your project...\n');
+  .option('-q, --quick', 'Quick scan with minimal output')
+  .action((options) => {
+    if (options.quick) {
+      console.log('🔍 Quick scanning...');
+    } else {
+      console.log('🔍 Scanning your project...\n');
+    }
     
     try {
       const scriptPath = path.join(__dirname, '..', 'src', 'upgrade-check.js');
-      execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+      const env = options.quick ? { ...process.env, QUICK_MODE: 'true' } : process.env;
+      execSync(`node "${scriptPath}"`, { stdio: 'inherit', env });
     } catch (error) {
       console.error('❌ Error running scan:', error.message);
     }
@@ -36,14 +42,63 @@ program
 program
   .command('analyze')
   .description('Deep peer dependency analysis')
-  .action(() => {
-    console.log('🔬 Running deep analysis...\n');
+  .option('-b, --brief', 'Brief analysis with key findings only')
+  .action((options) => {
+    if (options.brief) {
+      console.log('🔬 Brief analysis...');
+    } else {
+      console.log('🔬 Running deep analysis...\n');
+    }
     
     try {
       const scriptPath = path.join(__dirname, '..', 'src', 'peer-check.js');
-      execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+      const env = options.brief ? { ...process.env, BRIEF_MODE: 'true' } : process.env;
+      execSync(`node "${scriptPath}"`, { stdio: 'inherit', env });
     } catch (error) {
       console.error('❌ Error running analysis:', error.message);
+    }
+  });
+
+program
+  .command('precheck')
+  .description('Pre-installation compatibility check')
+  .argument('[packages...]', 'Packages to check before installing')
+  .action((packages) => {
+    console.log('🛡️  Running pre-installation checks...\n');
+    
+    if (packages && packages.length > 0) {
+      // Check specific packages
+      console.log(`📦 Checking ${packages.length} package(s) for conflicts...\n`);
+      
+      packages.forEach(pkg => {
+        console.log(`🔍 ${pkg}`);
+        try {
+          const [name, version] = pkg.includes('@') ? pkg.split('@') : [pkg, 'latest'];
+          const result = execSync(`npm info ${name}@${version || 'latest'} peerDependencies`, { 
+            encoding: 'utf8',
+            stdio: 'pipe'
+          });
+          
+          if (result.trim()) {
+            console.log(`   └── Peer deps: ${result.trim()}`);
+          } else {
+            console.log('   └── No peer dependencies required');
+          }
+        } catch (error) {
+          console.log(`   └── ⚠️  Could not fetch info for ${pkg}`);
+        }
+      });
+    } else {
+      // General project health check
+      try {
+        const scriptPath = path.join(__dirname, '..', 'src', 'peer-check.js');
+        execSync(`node "${scriptPath}"`, { 
+          stdio: 'inherit',
+          env: { ...process.env, BRIEF_MODE: 'true' }
+        });
+      } catch (error) {
+        console.error('❌ Error running precheck:', error.message);
+      }
     }
   });
 
