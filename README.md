@@ -13,6 +13,47 @@
 
 *Stop breaking your builds. Check compatibility first.*
 
+---
+
+## 🚀 **Quick Integration** (1 Command Setup)
+
+Add peer dependency checking to **any existing project** in seconds:
+
+```bash
+# One command setup - works with npm, yarn, pnpm, or bun
+npx @hyperdrift-io/peer-dependency-checker setup
+
+# Or install globally first
+npm install -g @hyperdrift-io/peer-dependency-checker
+pdc setup
+```
+
+**What this does:**
+✅ Detects your package manager (npm/yarn/pnpm/bun)  
+✅ Adds pre/post-install hooks to your `package.json`  
+✅ Sets up automatic checking on `npm install`, `yarn add`, etc.  
+✅ Uses smart defaults (`.pdcrc.json` optional - [customize if needed](./docs/CONFIG.md))  
+✅ **Works immediately** - zero configuration required  
+
+**Result:** Every time you or your team installs dependencies, peer dependency conflicts are checked automatically!
+
+---
+
+## 💡 **See It In Action**
+
+```bash
+# Before: Risky blind install
+npm install react@19 react-dom@19
+# ERROR: peer dependency conflicts everywhere 😢
+
+# After: Safe install with pdc
+npm install react@19 react-dom@19
+# 🔍 Pre-checking compatibility...
+# ✅ Compatible! Safe to upgrade
+# ⚠️  Conflict detected with @types/react - details below
+# Continue? (y/N)
+```
+
 [Install](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Examples](#-examples) • [Journey](#-journey)
 
 </div>
@@ -159,17 +200,31 @@ $ pdc recommend
 
 ## 🔧 Configuration
 
-Create a `.pdcrc.json` file in your project root:
+peer-dependency-checker works out-of-the-box with **smart defaults**:
+
+```json
+{
+  "packageManager": "auto-detect",     // npm, yarn, pnpm, bun
+  "riskTolerance": "medium",           // low, medium, high  
+  "autoCheck": true,                   // Auto-check on installs
+  "checkOnInstall": true,              // Pre-install checks
+  "excludePackages": [],               // Skip specific packages
+  "includeDevDependencies": true,      // Include dev dependencies
+  "outputFormat": "colored"            // colored, json, minimal
+}
+```
+
+**🎛️ Need custom settings?** Create `.pdcrc.json` in your project root:
 
 ```json
 {
   "riskTolerance": "low",
   "excludePackages": ["legacy-package"],
-  "includeDevDependencies": true,
-  "checkPeerDependencies": true,
-  "outputFormat": "detailed"
+  "outputFormat": "json"
 }
 ```
+
+📖 **[Full Configuration Guide →](./docs/CONFIG.md)**
 
 ## 🤝 Comparison with Other Tools
 

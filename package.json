@@ -6,13 +6,17 @@
   "bin": {
     "peer-dependency-checker": "./bin/pdc.js",
     "pdc": "./bin/pdc.js",
-    "pdc-install": "./bin/pdc-install"
+    "pdc-install": "./bin/pdc-install",
+    "pdc-setup": "./bin/setup.js"
   },
   "scripts": {
-    "build": "chmod +x bin/pdc.js && chmod +x bin/pdc-install && chmod +x bin/setup-hooks.sh",
+    "build": "chmod +x bin/pdc.js && chmod +x bin/pdc-install && chmod +x bin/setup-hooks.sh && chmod +x bin/setup.js && chmod +x bin/pdc",
     "dev": "npm run build",
-    "test": "echo 'No tests yet'",
-    "prepublishOnly": "npm run build",
+    "test": "node test/integration.test.js",
+    "test:integration": "node test/integration.test.js",
+    "test:journey": "node test/user-journey.test.js",
+    "test:all": "npm run test:integration && npm run test:journey",
+    "prepublishOnly": "npm run build && npm run test:all",
     "preinstall": "pdc scan --quick || true",
     "postinstall": "pdc analyze --brief || true",
     "setup-hooks": "./bin/setup-hooks.sh"

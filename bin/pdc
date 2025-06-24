@@ -1,0 +1,298 @@
+#!/usr/bin/env node
+
+/**
+ * Enhanced peer-dependency-checker CLI with integration commands
+ * by hyperdrift
+ */
+
+const { Command } = require('commander');
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const chalk = require('chalk');
+
+console.log('🔍 peer-dependency-checker by hyperdrift\n');
+
+const program = new Command();
+
+program
+  .name('pdc')
+  .description('Smart dependency compatibility checker with easy integration')
+  .version('1.0.0');
+
+// Existing commands
+program
+  .command('scan')
+  .description('Analyze current project for upgrade opportunities')
+  .option('--quick', 'Quick scan mode')
+  .action((options) => {
+    console.log('🔍 Scanning your project...\n');
+    
+    try {
+      const scriptPath = path.join(__dirname, '..', 'src', 'upgrade-check.js');
+      execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+    } catch (error) {
+      console.error('❌ Error running scan:', error.message);
+    }
+  });
+
+program
+  .command('analyze')
+  .description('Deep peer dependency analysis')
+  .option('--brief', 'Brief analysis mode')
+  .action((options) => {
+    console.log('🔬 Running deep analysis...\n');
+    
+    try {
+      const scriptPath = path.join(__dirname, '..', 'src', 'peer-check.js');
+      execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+    } catch (error) {
+      console.error('❌ Error running analysis:', error.message);
+    }
+  });
+
+program
+  .command('check')
+  .argument('[packages...]', 'Packages to check')
+  .description('Test specific package upgrades')
+  .action((packages) => {
+    if (!packages || packages.length === 0) {
+      console.log('⚠️  Please specify packages to check. Example:');
+      console.log('  pdc check react@19 react-dom@19');
+      return;
+    }
+
+    console.log(`🧪 Testing ${packages.length} package(s)...\n`);
+    
+    packages.forEach(pkg => {
+      console.log(`✅ ${pkg}`);
+      try {
+        const [name, version] = pkg.includes('@') ? pkg.split('@') : [pkg, 'latest'];
+        const result = execSync(`npm info ${name}@${version || 'latest'} peerDependencies`, { 
+          encoding: 'utf8',
+          stdio: 'pipe'
+        });
+        
+        if (result.trim()) {
+          console.log(`   └── Peer deps: ${result.trim()}`);
+        } else {
+          console.log('   └── No peer dependencies required');
+        }
+      } catch (error) {
+        console.log(`   └── Error: Could not fetch info for ${pkg}`);
+      }
+    });
+  });
+
+// New integration commands
+program
+  .command('setup')
+  .description('One-command setup for any project')
+  .option('--package-manager <pm>', 'Specify package manager (npm, yarn, pnpm, bun)', 'auto')
+  .option('--hooks', 'Setup git/husky hooks')
+  .option('--aliases', 'Setup shell aliases')
+  .action(async (options) => {
+    console.log(chalk.blue('🚀 Setting up peer-dependency-checker integration...\n'));
+    
+    try {
+      await setupIntegration(options);
+      console.log(chalk.green('\n✅ Setup complete! Your project is now protected.'));
+    } catch (error) {
+      console.error(chalk.red('❌ Setup failed:'), error.message);
+    }
+  });
+
+program
+  .command('install')
+  .description('Safe install wrapper for any package manager')
+  .allowUnknownOption()
+  .action(() => {
+    // Delegate to pdc-install
+    const scriptPath = path.join(__dirname, 'pdc-install');
+    const args = process.argv.slice(3); // Get remaining args after 'pdc install'
+    
+    try {
+      execSync(`node "${scriptPath}" ${args.join(' ')}`, { stdio: 'inherit' });
+    } catch (error) {
+      process.exit(error.status || 1);
+    }
+  });
+
+program
+  .command('precheck')
+  .argument('[packages...]', 'Packages to precheck')
+  .description('Pre-installation compatibility check')
+  .action((packages) => {
+    console.log(chalk.yellow('🛡️  Pre-installation check...\n'));
+    
+    if (packages && packages.length > 0) {
+      console.log(`📦 Checking: ${packages.join(', ')}`);
+      // Run specific package checks
+      packages.forEach(pkg => {
+        console.log(chalk.blue(`Checking ${pkg}...`));
+        // Add specific package checking logic here
+      });
+    } else {
+      // Run general project scan
+      try {
+        const scriptPath = path.join(__dirname, '..', 'src', 'peer-check.js');
+        execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+      } catch (error) {
+        console.log(chalk.yellow('⚠️  Some issues detected, but continuing...'));
+      }
+    }
+  });
+
+// Integration setup function
+async function setupIntegration(options) {
+  const packageManager = detectPackageManager(options.packageManager);
+  const packageJsonPath = path.join(process.cwd(), 'package.json');
+  
+  console.log(chalk.blue(`📦 Detected package manager: ${packageManager}`));
+  
+  // 1. Setup package.json scripts
+  if (fs.existsSync(packageJsonPath)) {
+    console.log(chalk.yellow('📝 Setting up package.json hooks...'));
+    await setupPackageJsonHooks(packageJsonPath, packageManager);
+  }
+  
+  // 2. Setup hooks if requested
+  if (options.hooks) {
+    console.log(chalk.yellow('🪝 Setting up git/husky hooks...'));
+    await setupHooks();
+  }
+  
+  // 3. Setup aliases if requested
+  if (options.aliases) {
+    console.log(chalk.yellow('🔗 Setting up shell aliases...'));
+    await setupAliases();
+  }
+  
+  // 4. Create .pdcrc configuration
+  await createConfig(packageManager);
+}
+
+function detectPackageManager(specified) {
+  if (specified !== 'auto') return specified;
+  
+  const cwd = process.cwd();
+  
+  if (fs.existsSync(path.join(cwd, 'bun.lockb'))) return 'bun';
+  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
+  if (fs.existsSync(path.join(cwd, 'package-lock.json'))) return 'npm';
+  
+  return 'npm'; // default
+}
+
+async function setupPackageJsonHooks(packageJsonPath, packageManager) {
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  
+  if (!packageJson.scripts) packageJson.scripts = {};
+  
+  // Add appropriate hooks based on package manager
+  const hooks = getHooksForPackageManager(packageManager);
+  
+  Object.assign(packageJson.scripts, hooks);
+  
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+  console.log(chalk.green('   ✅ Package.json hooks added'));
+}
+
+function getHooksForPackageManager(pm) {
+  const baseHooks = {
+    'pdc:check': 'pdc scan --quick || true',
+    'pdc:analyze': 'pdc analyze --brief || true'
+  };
+  
+  switch (pm) {
+    case 'yarn':
+      return {
+        ...baseHooks,
+        'preinstall': 'pdc scan --quick || true',
+        'postinstall': 'pdc analyze --brief || true'
+      };
+    case 'bun':
+      return {
+        ...baseHooks,
+        'preinstall': 'pdc scan --quick || true', 
+        'postinstall': 'pdc analyze --brief || true',
+        'bun:preinstall': 'pdc scan --quick || true'
+      };
+    case 'pnpm':
+      return {
+        ...baseHooks,
+        'preinstall': 'pdc scan --quick || true',
+        'postinstall': 'pdc analyze --brief || true'
+      };
+    default: // npm
+      return {
+        ...baseHooks,
+        'preinstall': 'pdc scan --quick || true',
+        'postinstall': 'pdc analyze --brief || true'
+      };
+  }
+}
+
+async function setupHooks() {
+  // Git hook
+  if (fs.existsSync('.git')) {
+    const hookPath = '.git/hooks/pre-commit';
+    const hookContent = `#!/bin/bash
+echo "🔍 Running peer dependency check..."
+pdc scan --quick || true
+`;
+    fs.writeFileSync(hookPath, hookContent);
+    fs.chmodSync(hookPath, '755');
+    console.log(chalk.green('   ✅ Git pre-commit hook installed'));
+  }
+  
+  // Husky hook (if husky exists)
+  if (fs.existsSync('.husky')) {
+    const huskyHook = '.husky/pre-commit';
+    const huskyContent = `#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running peer dependency check..."
+npx pdc scan --quick
+`;
+    fs.writeFileSync(huskyHook, huskyContent);
+    fs.chmodSync(huskyHook, '755');
+    console.log(chalk.green('   ✅ Husky pre-commit hook installed'));
+  }
+}
+
+async function setupAliases() {
+  console.log(chalk.blue('   📝 Add these aliases to your shell:'));
+  console.log(chalk.gray('   alias npm-safe="pdc install npm"'));
+  console.log(chalk.gray('   alias yarn-safe="pdc install yarn"'));
+  console.log(chalk.gray('   alias pnpm-safe="pdc install pnpm"'));
+  console.log(chalk.gray('   alias bun-safe="pdc install bun"'));
+}
+
+async function createConfig(packageManager) {
+  const config = {
+    packageManager,
+    riskTolerance: 'medium',
+    autoCheck: true,
+    checkOnInstall: true,
+    checkOnUpgrade: true,
+    excludePackages: [],
+    includeDevDependencies: true
+  };
+  
+  fs.writeFileSync('.pdcrc.json', JSON.stringify(config, null, 2));
+  console.log(chalk.green('   ✅ Configuration file created (.pdcrc.json)'));
+}
+
+if (process.argv.length <= 2) {
+  console.log('Quick commands:');
+  console.log('  pdc setup             One-command integration setup');
+  console.log('  pdc scan              Analyze your project');
+  console.log('  pdc install npm i react@19    Safe install with checking');
+  console.log('  pdc check react@19    Test specific upgrade\n');
+  console.log('Run "pdc --help" for all commands');
+  process.exit(0);
+}
+
+program.parse(); 

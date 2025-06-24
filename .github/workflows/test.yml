@@ -1,0 +1,143 @@
+name: Test External Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+        
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Make scripts executable
+      run: npm run build
+      
+    - name: Run integration tests
+      run: npm run test:integration
+      
+    - name: Run user journey tests  
+      run: npm run test:journey
+      
+    - name: Test CLI accessibility
+      run: |
+        node bin/pdc.js --version
+        node bin/pdc.js --help
+        
+    - name: Test setup script
+      run: |
+        node bin/setup.js --help
+        
+  test-package-managers:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        pm: [npm, yarn, pnpm]
+        
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Setup package manager
+      run: |
+        if [ "${{ matrix.pm }}" = "yarn" ]; then
+          npm install -g yarn
+        elif [ "${{ matrix.pm }}" = "pnpm" ]; then
+          npm install -g pnpm
+        fi
+        
+    - name: Test with ${{ matrix.pm }}
+      run: |
+        # Create test project
+        mkdir test-pm-${{ matrix.pm }}
+        cd test-pm-${{ matrix.pm }}
+        
+        # Initialize project
+        if [ "${{ matrix.pm }}" = "yarn" ]; then
+          yarn init -y
+          yarn add react@18
+          touch yarn.lock
+        elif [ "${{ matrix.pm }}" = "pnpm" ]; then
+          pnpm init -y
+          pnpm add react@18
+          touch pnpm-lock.yaml
+        else
+          npm init -y
+          npm install react@18
+        fi
+        
+        # Test CLI works
+        node ../bin/pdc.js --help
+        
+  test-real-world-setup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create real-world test project
+      run: |
+        mkdir real-world-test
+        cd real-world-test
+        
+        # Create realistic package.json
+        cat > package.json << 'EOF'
+        {
+          "name": "test-app",
+          "version": "1.0.0",
+          "scripts": {
+            "start": "react-scripts start",
+            "build": "react-scripts build"
+          },
+          "dependencies": {
+            "react": "^18.2.0",
+            "react-dom": "^18.2.0"
+          },
+          "devDependencies": {
+            "@types/react": "^18.0.0"
+          }
+        }
+        EOF
+        
+        # Create package-lock.json
+        echo '{"lockfileVersion": 2}' > package-lock.json
+        
+        # Test setup simulation
+        node ../bin/setup.js --help
+        
+        # Verify CLI works in project context
+        node ../bin/pdc.js check react@19 

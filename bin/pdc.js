@@ -135,6 +135,21 @@ program
     });
   });
 
+program
+  .command('setup')
+  .description('One-command setup for any project (external developers)')
+  .action(() => {
+    console.log('🚀 Running project setup...\n');
+    
+    try {
+      const scriptPath = path.join(__dirname, 'setup.js');
+      execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+    } catch (error) {
+      console.error('❌ Setup failed:', error.message);
+      process.exit(1);
+    }
+  });
+
 if (process.argv.length <= 2) {
   console.log('Quick commands:');
   console.log('  pdc scan          Analyze your project');
