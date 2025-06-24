@@ -1,13 +1,13 @@
 {
-  "name": "@hyperdrift-io/peer-dependency-checker",
-  "version": "1.0.0",
+  "name": "pdc-hyperdrift",
+  "version": "1.0.1",
   "description": "Smart dependency compatibility checker that prevents peer dependency conflicts before you upgrade",
   "main": "dist/index.js",
   "bin": {
-    "peer-dependency-checker": "./bin/pdc.js",
-    "pdc": "./bin/pdc.js",
-    "pdc-install": "./bin/pdc-install",
-    "pdc-setup": "./bin/setup.js"
+    "peer-dependency-checker": "bin/pdc.js",
+    "pdc": "bin/pdc.js",
+    "pdc-install": "bin/pdc-install",
+    "pdc-setup": "bin/setup.js"
   },
   "scripts": {
     "build": "chmod +x bin/pdc.js && chmod +x bin/pdc-install && chmod +x bin/setup-hooks.sh && chmod +x bin/setup.js && chmod +x bin/pdc",
@@ -39,7 +39,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hyperdrift-io/peer-dependency-checker.git"
+    "url": "git+https://github.com/hyperdrift-io/peer-dependency-checker.git"
   },
   "bugs": {
     "url": "https://github.com/hyperdrift-io/peer-dependency-checker/issues"
@@ -47,6 +47,9 @@
   "homepage": "https://github.com/hyperdrift-io/peer-dependency-checker#readme",
   "engines": {
     "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "bin/",

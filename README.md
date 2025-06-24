@@ -1,5 +1,3 @@
-# peer-dependency-checker
-
 # 🔍 peer-dependency-checker
 
 **by hyperdrift**
@@ -48,8 +46,6 @@ npm install react@19 react-dom@19
 # ⚠️  Conflict detected with @types/react - details below
 # Continue? (y/N)
 ```
-
-[Install](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Examples](#-examples) • [Journey](#-journey)
 
 ---
 
