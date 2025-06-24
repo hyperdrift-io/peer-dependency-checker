@@ -2,7 +2,7 @@
 
 /**
  * Quick setup script for external developers
- * Usage: npx @hyperdrift-io/peer-dependency-checker setup
+ * Usage: npx peer-dependency-checker setup
  */
 
 const fs = require('fs');
@@ -30,7 +30,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 peer-dependency-checker setup
 
 USAGE:
-  npx @hyperdrift-io/peer-dependency-checker setup [options]
+  npx peer-dependency-checker setup [options]
 
 DESCRIPTION:
   Sets up peer-dependency-checker in your project with automatic
@@ -44,9 +44,9 @@ OPTIONS:
   --dry-run          Show what would be done without making changes
 
 EXAMPLES:
-  npx @hyperdrift-io/peer-dependency-checker setup
-  npx @hyperdrift-io/peer-dependency-checker setup --pm yarn
-  npx @hyperdrift-io/peer-dependency-checker setup --dry-run
+  npx peer-dependency-checker setup
+npx peer-dependency-checker setup --pm yarn
+npx peer-dependency-checker setup --dry-run
 
 For more information: https://github.com/hyperdrift-io/peer-dependency-checker
 `);
@@ -90,7 +90,7 @@ async function main() {
     console.log(chalk.yellow('\n📝 What was added to your project:'));
     console.log(chalk.gray('   • pre/post-install scripts in package.json'));
     console.log(chalk.gray('   • .pdcrc.json configuration file'));
-    console.log(chalk.gray('   • @hyperdrift-io/peer-dependency-checker as devDependency'));
+    console.log(chalk.gray('   • peer-dependency-checker as devDependency'));
     
     console.log(chalk.blue('\n🚀 Try it now:'));
     console.log(chalk.gray(`   ${packageManager} install react@19  # Will check compatibility first`));
@@ -141,10 +141,10 @@ async function installPeerDependencyChecker(packageManager) {
   }
   
   const installCommands = {
-    npm: 'npm install --save-dev @hyperdrift-io/peer-dependency-checker',
-    yarn: 'yarn add --dev @hyperdrift-io/peer-dependency-checker',
-    pnpm: 'pnpm add --save-dev @hyperdrift-io/peer-dependency-checker',
-    bun: 'bun add --dev @hyperdrift-io/peer-dependency-checker'
+    npm: 'npm install --save-dev peer-dependency-checker',
+    yarn: 'yarn add --dev peer-dependency-checker',
+    pnpm: 'pnpm add --save-dev peer-dependency-checker',
+    bun: 'bun add --dev peer-dependency-checker'
   };
   
   const command = installCommands[packageManager];
@@ -269,7 +269,7 @@ ${chalk.blue.bold('peer-dependency-checker setup')}
 Automatically integrates peer dependency checking into your project.
 
 Usage:
-  npx @hyperdrift-io/peer-dependency-checker setup
+  npx peer-dependency-checker setup
   
 What it does:
   • Detects your package manager (npm/yarn/pnpm/bun)

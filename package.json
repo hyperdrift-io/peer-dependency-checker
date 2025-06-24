@@ -1,5 +1,5 @@
 {
-  "name": "pdc-hyperdrift",
+  "name": "peer-dependency-checker",
   "version": "1.0.1",
   "description": "Smart dependency compatibility checker that prevents peer dependency conflicts before you upgrade",
   "main": "dist/index.js",

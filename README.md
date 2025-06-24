@@ -14,10 +14,10 @@ Add peer dependency checking to **any existing project** in seconds:
 
 ```bash
 # One command setup - works with npm, yarn, pnpm, or bun
-npx @hyperdrift-io/peer-dependency-checker setup
+npx peer-dependency-checker setup
 
 # Or install globally first
-npm install -g @hyperdrift-io/peer-dependency-checker
+npm install -g peer-dependency-checker
 pdc setup
 ```
 
@@ -59,7 +59,7 @@ npm install react@19 react-dom@19
 # ERROR: peer dependency conflicts everywhere
 
 # The hyperdrift way: ✅ Check first
-npx @hyperdrift-io/peer-dependency-checker check react@19 react-dom@19
+npx peer-dependency-checker check react@19 react-dom@19
 # ✅ Compatible! Safe to upgrade
 # ⚠️  Conflict detected with @types/react - check details below
 ```
@@ -70,10 +70,10 @@ npx @hyperdrift-io/peer-dependency-checker check react@19 react-dom@19
 
 ```bash
 # Global install (recommended)
-npm install -g @hyperdrift-io/peer-dependency-checker
+npm install -g peer-dependency-checker
 
 # Or use directly with npx
-npx @hyperdrift-io/peer-dependency-checker --help
+npx peer-dependency-checker --help
 ```
 
 ## 🎯 Quick Start

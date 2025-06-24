@@ -9,7 +9,7 @@ Found this repo and want to **add peer dependency checking to your existing proj
 cd my-awesome-project
 
 # Run the setup (works with any package manager)
-npx @hyperdrift-io/peer-dependency-checker setup
+npx peer-dependency-checker setup
 ```
 
 **That's it!** ✨
@@ -62,7 +62,7 @@ npx pdc check lodash@5
 ```json
 {
   "devDependencies": {
-    "@hyperdrift-io/peer-dependency-checker": "^1.0.0"
+    "peer-dependency-checker": "^1.0.0"
   },
   "scripts": {
     "preinstall": "pdc scan --quick || true",
@@ -126,7 +126,7 @@ Edit `.pdcrc.json` to customize behavior:
 
 ```bash
 # Remove the package
-npm uninstall @hyperdrift-io/peer-dependency-checker
+npm uninstall peer-dependency-checker
 
 # Remove scripts from package.json (manual)
 # Delete .pdcrc.json file
@@ -137,7 +137,7 @@ npm uninstall @hyperdrift-io/peer-dependency-checker
 **Setup fails?**
 ```bash
 # Try global install first
-npm install -g @hyperdrift-io/peer-dependency-checker
+npm install -g peer-dependency-checker
 pdc setup
 ```
 

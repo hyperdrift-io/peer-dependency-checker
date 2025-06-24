@@ -36,7 +36,7 @@ Ever had a major upgrade break your entire build because of peer dependency conf
 
 ```bash
 # Install globally
-npm install -g @hyperdrift-io/peer-dependency-checker
+npm install -g peer-dependency-checker
 
 # Analyze your project
 pdc scan
@@ -90,13 +90,13 @@ At **hyperdrift**, we believe in tools that make developers' lives easier, not h
 
 ```bash
 # Global installation (recommended)
-npm install -g @hyperdrift-io/peer-dependency-checker
+npm install -g peer-dependency-checker
 
 # Use with npx (no installation needed)
-npx @hyperdrift-io/peer-dependency-checker scan
+npx peer-dependency-checker scan
 
 # Add to your project's devDependencies
-npm install --save-dev @hyperdrift-io/peer-dependency-checker
+npm install --save-dev peer-dependency-checker
 ```
 
 ### 📖 Documentation
@@ -137,4 +137,4 @@ Special thanks to the Node.js community for inspiration and to all the developer
 
 **Full Changelog**: https://github.com/hyperdrift-io/peer-dependency-checker/commits/v1.0.0
 
-**Download:** [npm package](https://www.npmjs.com/package/@hyperdrift-io/peer-dependency-checker) 
+**Download:** [npm package](https://www.npmjs.com/package/peer-dependency-checker) 
