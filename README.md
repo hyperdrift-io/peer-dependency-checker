@@ -6,11 +6,6 @@
 
 *The smart way to check dependency compatibility before you upgrade*
 
-[![npm version](https://img.shields.io/npm/v/@hyperdrift-io/peer-dependency-checker.svg?style=flat-square)](https://www.npmjs.com/package/@hyperdrift-io/peer-dependency-checker)
-[![Downloads](https://img.shields.io/npm/dm/@hyperdrift-io/peer-dependency-checker.svg?style=flat-square)](https://www.npmjs.com/package/@hyperdrift-io/peer-dependency-checker)
-[![License](https://img.shields.io/npm/l/@hyperdrift-io/peer-dependency-checker.svg?style=flat-square)](https://github.com/hyperdrift-io/peer-dependency-checker/blob/main/LICENSE)
-[![Hyperdrift](https://img.shields.io/badge/built%20by-hyperdrift-blue.svg?style=flat-square)](https://hyperdrift.io)
-
 *Stop breaking your builds. Check compatibility first.*
 
 ---
@@ -190,11 +185,11 @@ $ pdc recommend
 | Command | Description |
 |---------|-------------|
 | `pdc scan` | Analyze current project for upgrade opportunities |
-| `pdc check \<packages\>` | Test specific package upgrades for conflicts |
+| `pdc check <packages>` | Test specific package upgrades for conflicts |
 | `pdc analyze` | Deep analysis of all peer dependencies |
 | `pdc recommend` | Get smart upgrade recommendations |
 | `pdc outdated` | Enhanced version of `npm outdated` with compatibility |
-| `pdc why \<package\>` | Explain why a package can't be upgraded |
+| `pdc why <package>` | Explain why a package can't be upgraded |
 
 ## 🔧 Configuration
 
@@ -242,7 +237,7 @@ At **hyperdrift**, we believe in tools that make developers' lives easier, not h
 
 ## 📊 Journey
 
-Read about how we built this tool and the problems it solves in our [Journey article](./public/journey.md).
+Read about how we built this tool and the problems it solves in our [Journey article](./public/docs/journey.mdx).
 
 ## 🚧 Roadmap
 

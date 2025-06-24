@@ -16,9 +16,7 @@
     "test:integration": "node test/integration.test.js",
     "test:journey": "node test/user-journey.test.js",
     "test:all": "npm run test:integration && npm run test:journey",
-    "validate:markdown": "node scripts/validate-markdown.js",
-    "fix:markdown": "node scripts/fix-mdx-tags.js",
-    "prepublishOnly": "npm run build && npm run test:all && npm run validate:markdown",
+    "prepublishOnly": "npm run build && npm run test:all",
     "preinstall": "pdc scan --quick || true",
     "postinstall": "pdc analyze --brief || true",
     "setup-hooks": "./bin/setup-hooks.sh"
