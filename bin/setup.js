@@ -119,15 +119,6 @@ function detectPackageManager(projectPath) {
 async function installPeerDependencyChecker(packageManager) {
   console.log(chalk.yellow('📥 Installing peer-dependency-checker...'));
   
-  try {
-    // Check if already installed globally
-    execSync('pdc --version', { stdio: 'pipe' });
-    console.log(chalk.green('   ✅ Already installed globally'));
-    return;
-  } catch {
-    // Not global, install as devDependency
-  }
-  
   const installCommands = {
     npm: 'npm install --save-dev peer-dependency-checker',
     yarn: 'yarn add --dev peer-dependency-checker',
@@ -135,11 +126,23 @@ async function installPeerDependencyChecker(packageManager) {
     bun: 'bun add --dev peer-dependency-checker'
   };
   
+  // Always install as devDependency for team collaboration
+  // Even if already installed globally
   const command = installCommands[packageManager];
   console.log(chalk.gray(`   Running: ${command}`));
   
-  execSync(command, { stdio: 'inherit' });
-  console.log(chalk.green('   ✅ Installed as devDependency'));
+  try {
+    execSync(command, { stdio: 'inherit' });
+    console.log(chalk.green('   ✅ Installed as devDependency'));
+  } catch (error) {
+    // If install fails, check if it's already available
+    try {
+      execSync('pdc --version', { stdio: 'pipe' });
+      console.log(chalk.green('   ✅ Already available globally'));
+    } catch {
+      throw new Error(`Failed to install peer-dependency-checker: ${error.message}`);
+    }
+  }
 }
 
 async function setupPackageScripts(packageJsonPath, packageManager) {
