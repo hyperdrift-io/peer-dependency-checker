@@ -270,7 +270,6 @@ MIT © [Hyperdrift](https://hyperdrift.io)
 
 ---
 
-<div align="center">
 
 **Built with ❤️ by the hyperdrift team**
 
